@@ -1,0 +1,11 @@
+{
+  "name": "Build and upload to GCS",
+  "description": "Template to build a Go application and upload the result to GCS.",
+  "iconName": "StriveCast_Blue_NoSlogan",
+  "categories": [
+    "Go"
+  ],
+  "filePatterns": [
+    "go.mod$"
+  ]
+}
