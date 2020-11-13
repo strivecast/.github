@@ -1,0 +1,13 @@
+{
+  "name": "Build JS, scramble and upload",
+  "description": "Template to build JavaScript, TypeScript or Vue.js, obfuscates it using Jscrambler and uploads it to GCS.",
+  "iconName": "StriveCast_Blue_NoSlogan",
+  "categories": [
+    "JavaScript",
+    "TypeScript",
+    "Vue"
+  ],
+  "filePatterns": [
+    "package.json$"
+  ]
+}
