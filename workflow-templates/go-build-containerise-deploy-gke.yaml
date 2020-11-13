@@ -1,0 +1,76 @@
+name: 'Build and deploy Docker container to GKE (production)'
+
+on:
+  release:
+    types: [published]
+
+env:
+  BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
+  GKE_CLUSTER_ZONE: ${{ secrets.GKE_CLUSTER_ZONE }}
+  GKE_DEPLOYMENT: gke/production-docker   #TODO: Adjust to your needs
+  GKE_NODEPOOL: ${{ secrets.GKE_NODEPOOL }}
+
+jobs:
+  # Based on the official GKE example
+  # https://github.com/GoogleCloudPlatform/github-actions/tree/master/example-workflows/gke
+  setup-build-deploy:
+    name: Setup, build and deploy Docker container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup gcloud CLI
+        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          version: '318.0.0'
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker to push to GCP
+        run: |-
+          gcloud --quiet auth configure-docker
+
+      - name: Get GKE container credentials
+        run: |-
+          gcloud container clusters get-credentials "$GKE_CLUSTER_NAME" --zone "$GKE_CLUSTER_ZONE"
+
+      - name: Extract the release version
+        run: echo "GITHUB_RELEASE_VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+      - name: Extract the release major version
+        run: echo "GITHUB_RELEASE_MAJOR_VERSION=$(python -c "print('$GITHUB_REF'.split('tags/')[1].split('.')[0])")" >> $GITHUB_ENV
+
+      - name: Define the service image
+        run: echo "SERVICE_IMAGE=eu.gcr.io/$GCP_PROJECT_ID/$GITHUB_REPOSITORY:$GITHUB_RELEASE_VERSION" >> $GITHUB_ENV
+
+      - name: Build Docker container
+        run: |-
+          docker build \
+            --tag "$SERVICE_IMAGE" \
+            --build-arg "GITHUB_TOKEN=$BOT_TOKEN" \
+            --build-arg "APP_VERSION=$GITHUB_RELEASE_VERSION" \
+            --file "deployments/$GKE_DEPLOYMENT/Dockerfile" \
+            .
+
+      - name: Push Docker container to GKE
+        run: |-
+          docker push "$SERVICE_IMAGE"
+
+      - name: Setup Kustomize to update Kubernetes
+        run: |-
+          curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/v3.1.0/kustomize_3.1.0_linux_amd64
+          chmod u+x ./kustomize
+
+      - name: Deploy
+        run: |-
+          cd "deployments/$GKE_DEPLOYMENT"
+          ../../../kustomize edit set namesuffix -- "-$GITHUB_RELEASE_MAJOR_VERSION"
+          ../../../kustomize edit add label "majorVersion:$GITHUB_RELEASE_MAJOR_VERSION"
+          ../../../kustomize edit set image "SERVICE_IMAGE=$SERVICE_IMAGE"
+          ../../../kustomize build . | sed "s#gke-nodepool-placeholder#$GKE_NODEPOOL#" | kubectl apply -f -
+          kubectl rollout status -n production "deployment/$GITHUB_REPOSITORY-deployment-$GITHUB_RELEASE_MAJOR_VERSION"
+          kubectl get services -o wide
