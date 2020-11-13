@@ -5,10 +5,7 @@ on:
     types: [published]
 
 env:
-  JSCRAMBLER_CREDENTIALS: ${{ secrets.JSCRAMBLER_CREDENTIALS }}
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GKE_CLUSTER_NAME: ${{ secrets.GKE_CLUSTER_NAME }}
-  GKE_CLUSTER_ZONE: ${{ secrets.GKE_CLUSTER_ZONE }}
   GCS_PATH: ${{ secrets.GCS_PATH }}
 
 jobs:
@@ -34,7 +31,7 @@ jobs:
         with:
           version: '318.0.0'
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: $GCP_PROJECT_ID
 
       - name: 'Install and bundle'
         shell: 'bash'
