@@ -11,7 +11,7 @@
 - [ ] Updated dependencies (if necessary)
 
 # Related ticket(s)
-<!-- List the related JIRA tickets here. Specifying the ticket id here is enough, 
-as GitHub's auto-reference feature will create the actual link. For example, IT-123 will 
+<!-- List the related JIRA tickets here. Specifying the ticket id here is enough,
+as GitHub's auto-reference feature will create the actual link. For example, IT-123 will
 be converted into the correct link to the ticket with this id on JIRA. -->
  * 
